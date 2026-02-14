@@ -7,8 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { mockPatients, triageQuestions, getUrgencyLevel, urgencyLabels, type Patient, type UrgencyLevel } from '@/data/mockData';
-import { Users, AlertTriangle, Clock, Activity } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { triageQuestions, getUrgencyLevel, urgencyLabels, type UrgencyLevel } from '@/data/mockData';
+import { Users, AlertTriangle, Clock, Activity, Save, CheckCircle, Edit3 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const urgencyBadgeClass: Record<UrgencyLevel, string> = {
   critical: 'urgency-critical',
@@ -17,15 +19,30 @@ const urgencyBadgeClass: Record<UrgencyLevel, string> = {
   low: 'urgency-low',
 };
 
+interface TriagedPatient {
+  id: string;
+  nom: string;
+  prenom: string;
+  age: string;
+  motif: string;
+  contact: string;
+  score: number;
+  level: UrgencyLevel;
+  heureArrivee: string;
+}
+
 const UrgentisteDashboard = () => {
-  const [patients] = useState<Patient[]>(mockPatients);
   const [triageAnswers, setTriageAnswers] = useState<Record<string, number | boolean>>({});
   const [patientInfo, setPatientInfo] = useState({ nom: '', prenom: '', age: '', motif: '', contact: '' });
   const [calculatedScore, setCalculatedScore] = useState<number | null>(null);
+  const [adjustedScore, setAdjustedScore] = useState<number | null>(null);
+  const [triagedPatients, setTriagedPatients] = useState<TriagedPatient[]>([]);
+  const { toast } = useToast();
 
-  const enAttente = patients.filter(p => p.status === 'en_attente');
-  const urgents = enAttente.filter(p => p.scoreUrgence >= 7);
-  const normaux = enAttente.filter(p => p.scoreUrgence < 7);
+  const finalScore = adjustedScore ?? calculatedScore;
+
+  const urgents = triagedPatients.filter(p => p.score >= 7);
+  const normaux = triagedPatients.filter(p => p.score < 7);
 
   const calculateScore = () => {
     let score = 0;
@@ -37,14 +54,42 @@ const UrgentisteDashboard = () => {
         score += q.weight;
       }
     });
-    setCalculatedScore(Math.min(Math.round(Math.max(score, 1)), 10));
+    const computed = Math.min(Math.round(Math.max(score, 1)), 10);
+    setCalculatedScore(computed);
+    setAdjustedScore(null);
+  };
+
+  const saveTriageResult = () => {
+    if (!finalScore || !patientInfo.nom || !patientInfo.prenom) {
+      toast({ title: 'Erreur', description: 'Veuillez remplir le nom, prénom et calculer le score.', variant: 'destructive' });
+      return;
+    }
+
+    const newPatient: TriagedPatient = {
+      id: `T-${Date.now()}`,
+      ...patientInfo,
+      score: finalScore,
+      level: getUrgencyLevel(finalScore),
+      heureArrivee: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    setTriagedPatients(prev => [newPatient, ...prev]);
+    setPatientInfo({ nom: '', prenom: '', age: '', motif: '', contact: '' });
+    setTriageAnswers({});
+    setCalculatedScore(null);
+    setAdjustedScore(null);
+
+    toast({
+      title: 'Patient enregistré',
+      description: `${newPatient.prenom} ${newPatient.nom} — Score: ${newPatient.score}/10 (${urgencyLabels[newPatient.level]})`,
+    });
   };
 
   const stats = [
-    { label: 'Patients en attente', value: enAttente.length, icon: <Users size={20} />, color: 'text-primary' },
+    { label: 'Total triés', value: triagedPatients.length, icon: <Activity size={20} />, color: 'text-primary' },
     { label: 'Urgences', value: urgents.length, icon: <AlertTriangle size={20} />, color: 'text-destructive' },
     { label: 'Circuit normal', value: normaux.length, icon: <Clock size={20} />, color: 'text-success' },
-    { label: 'Triés aujourd\'hui', value: patients.length, icon: <Activity size={20} />, color: 'text-warning' },
+    { label: 'En attente', value: triagedPatients.length, icon: <Users size={20} />, color: 'text-warning' },
   ];
 
   return (
@@ -72,6 +117,7 @@ const UrgentisteDashboard = () => {
             <TabsTrigger value="triage">Pré-triage</TabsTrigger>
             <TabsTrigger value="urgents">Urgences ({urgents.length})</TabsTrigger>
             <TabsTrigger value="normaux">Circuit normal ({normaux.length})</TabsTrigger>
+            <TabsTrigger value="tous">Tous les patients ({triagedPatients.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="triage" className="mt-4">
@@ -82,11 +128,11 @@ const UrgentisteDashboard = () => {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label>Nom</Label>
+                      <Label>Nom *</Label>
                       <Input className="mt-1" value={patientInfo.nom} onChange={e => setPatientInfo({...patientInfo, nom: e.target.value})} placeholder="Nom" />
                     </div>
                     <div>
-                      <Label>Prénom</Label>
+                      <Label>Prénom *</Label>
                       <Input className="mt-1" value={patientInfo.prenom} onChange={e => setPatientInfo({...patientInfo, prenom: e.target.value})} placeholder="Prénom" />
                     </div>
                   </div>
@@ -137,18 +183,50 @@ const UrgentisteDashboard = () => {
                   </div>
 
                   {calculatedScore !== null && (
-                    <div className="text-center p-4 rounded-lg bg-secondary">
-                      <p className="text-sm text-muted-foreground mb-1">Score d'urgence calculé</p>
-                      <span className="text-4xl font-bold text-foreground">{calculatedScore}</span>
-                      <span className="text-lg text-muted-foreground">/10</span>
-                      <div className="mt-2">
-                        <Badge className={urgencyBadgeClass[getUrgencyLevel(calculatedScore)]}>
-                          {urgencyLabels[getUrgencyLevel(calculatedScore)]}
-                        </Badge>
+                    <div className="p-4 rounded-lg bg-secondary space-y-4">
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground mb-1">Score calculé automatiquement</p>
+                        <span className="text-4xl font-bold text-foreground">{calculatedScore}</span>
+                        <span className="text-lg text-muted-foreground">/10</span>
                       </div>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        {calculatedScore >= 7 ? '→ Transfert direct à la réceptionniste' : '→ Circuit normal'}
-                      </p>
+
+                      {/* Manual adjustment */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Edit3 size={14} />
+                          <span>Ajuster manuellement le score</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <Slider
+                            value={[adjustedScore ?? calculatedScore]}
+                            onValueChange={([v]) => setAdjustedScore(v)}
+                            min={1}
+                            max={10}
+                            step={1}
+                            className="flex-1"
+                          />
+                          <span className="text-lg font-bold text-foreground w-10 text-center">
+                            {finalScore}
+                          </span>
+                        </div>
+                        {adjustedScore !== null && adjustedScore !== calculatedScore && (
+                          <p className="text-xs text-warning">Score ajusté manuellement (original: {calculatedScore})</p>
+                        )}
+                      </div>
+
+                      <div className="text-center">
+                        <Badge className={urgencyBadgeClass[getUrgencyLevel(finalScore!)]}>
+                          {urgencyLabels[getUrgencyLevel(finalScore!)]}
+                        </Badge>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          {finalScore! >= 7 ? '→ Transfert direct à la réceptionniste' : '→ Circuit normal'}
+                        </p>
+                      </div>
+
+                      <Button onClick={saveTriageResult} className="w-full gap-2" variant="default">
+                        <Save size={16} />
+                        Valider et enregistrer le triage
+                      </Button>
                     </div>
                   )}
                 </CardContent>
@@ -157,11 +235,15 @@ const UrgentisteDashboard = () => {
           </TabsContent>
 
           <TabsContent value="urgents" className="mt-4">
-            <PatientList patients={urgents} title="Patients urgents" />
+            <TriagedPatientList patients={urgents} title="Patients urgents" />
           </TabsContent>
 
           <TabsContent value="normaux" className="mt-4">
-            <PatientList patients={normaux} title="Patients en circuit normal" />
+            <TriagedPatientList patients={normaux} title="Patients en circuit normal" />
+          </TabsContent>
+
+          <TabsContent value="tous" className="mt-4">
+            <TriagedPatientList patients={triagedPatients} title="Tous les patients triés" />
           </TabsContent>
         </Tabs>
       </div>
@@ -169,7 +251,7 @@ const UrgentisteDashboard = () => {
   );
 };
 
-const PatientList = ({ patients, title }: { patients: Patient[]; title: string }) => (
+const TriagedPatientList = ({ patients, title }: { patients: TriagedPatient[]; title: string }) => (
   <Card>
     <CardHeader><CardTitle>{title}</CardTitle></CardHeader>
     <CardContent>
@@ -181,12 +263,13 @@ const PatientList = ({ patients, title }: { patients: Patient[]; title: string }
             <div key={p.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 border border-border">
               <div>
                 <p className="font-medium text-foreground">{p.prenom} {p.nom}</p>
-                <p className="text-sm text-muted-foreground">{p.motif}</p>
+                <p className="text-sm text-muted-foreground">{p.motif || 'Aucun motif'}</p>
+                {p.age && <p className="text-xs text-muted-foreground">{p.age} ans</p>}
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-sm text-muted-foreground">{p.heureArrivee}</span>
-                <Badge className={urgencyBadgeClass[p.urgencyLevel]}>
-                  {p.scoreUrgence}/10
+                <Badge className={urgencyBadgeClass[p.level]}>
+                  {p.score}/10
                 </Badge>
               </div>
             </div>

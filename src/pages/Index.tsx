@@ -112,14 +112,9 @@ const Index = () => {
         <div className="container mx-auto px-4 py-12">
           <div className="grid md:grid-cols-3 gap-8">
             <div>
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-9 h-9 rounded-lg gradient-hero flex items-center justify-center">
-                  <span className="text-primary-foreground font-bold text-lg">M</span>
-                </div>
-                <span className="font-bold text-xl text-foreground">MediZen</span>
-              </div>
-              <p className="text-muted-foreground text-sm">
-                Système de gestion des urgences pour l'Hôpital de Teboulba - Monastir.
+              <h4 className="font-semibold text-foreground mb-4">Hôpital d'Urgence Teboulba</h4>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Service d'urgences médicales offrant une prise en charge rapide et professionnelle pour tous les patients de la région de Monastir.
               </p>
             </div>
             <div>
@@ -127,11 +122,11 @@ const Index = () => {
               <div className="space-y-3 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Phone size={16} className="text-primary" />
-                  <span>+216 73 479 017</span>
+                  <span>73 256 145</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin size={16} className="text-primary" />
-                  <span>Teboulba, Monastir, Tunisie</span>
+                  <span>Teboulba, Monastir</span>
                 </div>
               </div>
             </div>
@@ -139,12 +134,15 @@ const Index = () => {
               <h4 className="font-semibold text-foreground mb-4">Horaires</h4>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Clock size={16} className="text-primary" />
-                <span>Ouvert 24h/24 — 7j/7</span>
+                <span>24h/24 – 7j/7</span>
               </div>
+              <p className="text-muted-foreground text-sm mt-3">
+                Service d'urgences disponible en permanence, y compris les jours fériés.
+              </p>
             </div>
           </div>
           <div className="mt-8 pt-6 border-t border-border text-center text-sm text-muted-foreground">
-            © 2026 MediZen — Hôpital d'Urgence Teboulba - Monastir. Tous droits réservés.
+            © 2026 Hôpital d'Urgence Teboulba - Monastir. Tous droits réservés.
           </div>
         </div>
       </footer>

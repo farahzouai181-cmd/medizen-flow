@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
 import NotFound from "./pages/NotFound";
 import UrgentisteDashboard from "./pages/urgentiste/UrgentisteDashboard";
 import ReceptionnisteDashboard from "./pages/receptionniste/ReceptionnisteDashboard";
@@ -32,6 +33,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/dashboard/urgentiste" element={<ProtectedRoute allowedRoles={['urgentiste', 'admin']}><UrgentisteDashboard /></ProtectedRoute>} />
             <Route path="/dashboard/urgentiste/*" element={<ProtectedRoute allowedRoles={['urgentiste', 'admin']}><UrgentisteDashboard /></ProtectedRoute>} />
             <Route path="/dashboard/receptionniste" element={<ProtectedRoute allowedRoles={['receptionniste', 'admin']}><ReceptionnisteDashboard /></ProtectedRoute>} />
